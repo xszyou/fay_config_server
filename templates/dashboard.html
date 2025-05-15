@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Fay Config Server{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3 col-lg-2">
+        <div class="sidebar">
+            <h5 class="mb-3">
+                <i class="fas fa-th-large me-2"></i>Navigation
+            </h5>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link active" href="{{ url_for('dashboard') }}">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('new_project') }}">
+                        <i class="fas fa-plus-circle me-2"></i>New Project
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('logout') }}">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="col-md-9 col-lg-10">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-project-diagram me-2"></i>Projects
+                </h4>
+                <a href="{{ url_for('new_project') }}" class="btn btn-light btn-sm">
+                    <i class="fas fa-plus me-1"></i>New Project
+                </a>
+            </div>
+            <div class="card-body">
+                {% if projects %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Project Name</th>
+                                <th>Project ID</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for project in projects %}
+                            <tr>
+                                <td>{{ project.name }}</td>
+                                <td>{{ project.id }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('project_config', project_id=project.id) }}" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-cog me-1"></i>Configure
+                                        </a>
+                                        <a href="{{ url_for('project_logs', project_id=project.id) }}" class="btn btn-info btn-sm">
+                                            <i class="fas fa-history me-1"></i>Access Logs
+                                        </a>
+                                        <button type="button" class="btn btn-danger btn-sm delete-project-btn" data-project-id="{{ project.id }}" data-project-name="{{ project.name }}">
+                                            <i class="fas fa-trash me-1"></i>Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle me-2"></i>No projects found. 
+                    <a href="{{ url_for('new_project') }}" class="alert-link">Create your first project</a>.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Project Modal -->
+<div class="modal fade" id="deleteProjectModal" tabindex="-1" aria-labelledby="deleteProjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteProjectModalLabel">Delete Project</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the project "<span id="project-name-to-delete"></span>"?</p>
+                <p class="text-danger">This action cannot be undone!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="delete-project-form" method="post" action="">
+                    <button type="submit" class="btn btn-danger">Delete Project</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Delete project button click event
+        const deleteButtons = document.querySelectorAll('.delete-project-btn');
+        if (deleteButtons && deleteButtons.length > 0) {
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const projectId = this.getAttribute('data-project-id');
+                    const projectName = this.getAttribute('data-project-name');
+                    
+                    // 检查项目ID是否有效
+                    if (!projectId || projectId.trim() === '') {
+                        alert('无效的项目ID，无法删除项目');
+                        return;
+                    }
+                    
+                    // 设置模态框中的项目名称
+                    const projectNameElement = document.getElementById('project-name-to-delete');
+                    if (projectNameElement) {
+                        projectNameElement.textContent = projectName || '未知项目';
+                    } else {
+                        console.error('找不到project-name-to-delete元素');
+                    }
+                    
+                    // 设置表单action
+                    const deleteForm = document.getElementById('delete-project-form');
+                    if (deleteForm) {
+                        const actionUrl = "{{ url_for('delete_project', project_id='TEMP_ID') }}".replace('TEMP_ID', projectId);
+                        deleteForm.action = actionUrl;
+                        
+                        // 显示模态框
+                        try {
+                            const deleteModal = new bootstrap.Modal(document.getElementById('deleteProjectModal'));
+                            deleteModal.show();
+                        } catch (error) {
+                            console.error('显示模态框失败:', error);
+                            alert('显示确认对话框失败');
+                        }
+                    } else {
+                        console.error('找不到delete-project-form元素');
+                        alert('错误：无法完成删除操作');
+                    }
+                });
+            });
+        }
+    });
+</script>
+{% endblock %} 

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}New Project - Fay Config Server{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3 col-lg-2">
+        <div class="sidebar">
+            <h5 class="mb-3">
+                <i class="fas fa-th-large me-2"></i>Navigation
+            </h5>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('dashboard') }}">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="{{ url_for('new_project') }}">
+                        <i class="fas fa-plus-circle me-2"></i>New Project
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('logout') }}">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="col-md-9 col-lg-10">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-plus-circle me-2"></i>Create New Project
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('new_project') }}">
+                    <div class="mb-3">
+                        <label for="project_name" class="form-label">Project Name</label>
+                        <input type="text" class="form-control" id="project_name" name="project_name" placeholder="Enter project name" required>
+                        <div class="form-text">A descriptive name for your configuration project</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="project_path" class="form-label">Project Path</label>
+                        <input type="text" class="form-control" id="project_path" name="project_path" placeholder="Enter project path (leave blank for current directory)">
+                        <div class="form-text">The path where system.conf and config.json are located (absolute path recommended)</div>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="create_backup" name="create_backup" checked>
+                        <label class="form-check-label" for="create_backup">Create backup of existing configuration files</label>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Create Project
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

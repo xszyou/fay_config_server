@@ -1,0 +1,702 @@
+{% extends "base.html" %}
+
+{% block title %}{{ project.name }} - Configuration{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jsoneditor@9.10.0/dist/jsoneditor.min.css">
+<style>
+    #json-editor {
+        height: 500px;
+    }
+    .nav-tabs .nav-link {
+        color: #495057;
+    }
+    .nav-tabs .nav-link.active {
+        color: #007bff;
+        font-weight: bold;
+    }
+    .accordion-button:not(.collapsed) {
+        background-color: #e7f1ff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3 col-lg-2">
+        <div class="sidebar">
+            <h5 class="mb-3">
+                <i class="fas fa-th-large me-2"></i>Navigation
+            </h5>
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('dashboard') }}">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('new_project') }}">
+                        <i class="fas fa-plus-circle me-2"></i>New Project
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('logout') }}">
+                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class="col-md-9 col-lg-10">
+        <div class="card shadow mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>{{ project.name }} Configuration
+                </h4>
+                <div>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i>Back
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs" id="configTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="system-conf-tab" data-bs-toggle="tab" data-bs-target="#system-conf" type="button" role="tab" aria-controls="system-conf" aria-selected="true">
+                            <i class="fas fa-cog me-1"></i>system.conf
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="config-json-tab" data-bs-toggle="tab" data-bs-target="#config-json" type="button" role="tab" aria-controls="config-json" aria-selected="false">
+                            <i class="fas fa-code me-1"></i>config.json
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="field-mgmt-tab" data-bs-toggle="tab" data-bs-target="#field-mgmt" type="button" role="tab" aria-controls="field-mgmt" aria-selected="false">
+                            <i class="fas fa-list-alt me-1"></i>Field Management
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content mt-3" id="configTabsContent">
+                    <div class="tab-pane fade show active" id="system-conf" role="tabpanel" aria-labelledby="system-conf-tab">
+                        <form action="javascript:void(0);">
+                            <input type="hidden" name="update_system_conf" value="1">
+                            
+                            <div class="accordion" id="accordionSystemConf">
+                                {% for section in system_config.sections() %}
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="heading{{ section }}">
+                                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ section }}" aria-expanded="true" aria-controls="collapse{{ section }}">
+                                            <i class="fas fa-folder me-2"></i>{{ section }}
+                                        </button>
+                                    </h2>
+                                    <div id="collapse{{ section }}" class="accordion-collapse collapse show" aria-labelledby="heading{{ section }}" data-bs-parent="#accordionSystemConf">
+                                        <div class="accordion-body">
+                                            {% for key, value in system_config[section].items() %}
+                                            <div class="mb-3 row">
+                                                <label for="{{ section }}_{{ key }}" class="col-sm-3 col-form-label">{{ key }}</label>
+                                                <div class="col-sm-9">
+                                                    <input type="text" 
+                                                           class="form-control" 
+                                                           id="{{ section }}_{{ key }}" 
+                                                           name="{{ section }}_{{ key }}" 
+                                                           value="{{ value }}"
+                                                           {% if key.startswith('#') %}readonly{% endif %}>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="d-flex justify-content-end mt-3">
+                                <button type="button" id="save-system-conf-btn" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Save system.conf
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="tab-pane fade" id="config-json" role="tabpanel" aria-labelledby="config-json-tab">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>The JSON editor allows you to edit the config.json file. Be careful with your changes!
+                        </div>
+                        <div class="mb-3">
+                            <div id="json-editor"></div>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <button type="button" id="save-json-btn" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save config.json
+                            </button>
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="field-mgmt" role="tabpanel" aria-labelledby="field-mgmt-tab">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>Field Management allows you to add, edit, or remove specific configuration fields.
+                        </div>
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">Add/Edit Field</h5>
+                            </div>
+                            <div class="card-body">
+                                <form id="field-management-form">
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <label for="field-config-type" class="form-label">Configuration Type</label>
+                                            <select class="form-select" id="field-config-type">
+                                                <option value="system">system.conf</option>
+                                                <option value="config">config.json</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4" id="section-container">
+                                            <label for="field-section" class="form-label">Section</label>
+                                            <select class="form-select" id="field-section">
+                                                <option value="">-- Select Section --</option>
+                                                {% for section in system_config.sections() %}
+                                                <option value="{{ section }}">{{ section }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-md-4" id="json-path-container" style="display:none;">
+                                            <label for="field-json-path" class="form-label">JSON Path</label>
+                                            <input type="text" class="form-control" id="field-json-path" placeholder="e.g., attribute.name">
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label for="field-key" class="form-label">Field Key</label>
+                                            <input type="text" class="form-control" id="field-key" placeholder="Enter field key">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label for="field-value" class="form-label">Field Value</label>
+                                            <input type="text" class="form-control" id="field-value" placeholder="Enter field value">
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-end">
+                                        <button type="button" id="add-field-btn" class="btn btn-primary">
+                                            <i class="fas fa-plus-circle me-2"></i>Add/Update Field
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">Field Browser</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="field-browser-type" class="form-label">Configuration Type</label>
+                                        <select class="form-select" id="field-browser-type">
+                                            <option value="system">system.conf</option>
+                                            <option value="config">config.json</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="field-browser-section" class="form-label">Section/Path Filter</label>
+                                        <select class="form-select" id="field-browser-section">
+                                            <option value="">-- All Sections --</option>
+                                            {% for section in system_config.sections() %}
+                                            <option value="{{ section }}">{{ section }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover" id="field-browser-table">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Section/Path</th>
+                                                <th>Key</th>
+                                                <th>Value</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Fields will be loaded dynamically -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jsoneditor@9.10.0/dist/jsoneditor.min.js"></script>
+<script>
+    // Status message helper function
+    function showStatusMessage(message, type) {
+        type = type || 'info';
+        var alertDiv = document.createElement('div');
+        alertDiv.className = "alert alert-" + type + " alert-dismissible fade show mt-3";
+        alertDiv.role = 'alert';
+        
+        var iconClass = 'fa-info-circle';
+        if (type === 'success') {
+            iconClass = 'fa-check-circle';
+        } else if (type === 'danger') {
+            iconClass = 'fa-exclamation-triangle';
+        } else if (type === 'warning') {
+            iconClass = 'fa-exclamation-circle';
+        }
+        
+        alertDiv.innerHTML = '<i class="fas ' + iconClass + ' me-2"></i>' + message +
+            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+        
+        // Insert as the first child of the card body
+        var cardBody = document.querySelector('.card-body');
+        cardBody.insertBefore(alertDiv, cardBody.firstChild);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(function() {
+            var bsAlert = new bootstrap.Alert(alertDiv);
+            bsAlert.close();
+        }, 5000);
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize JSON Editor
+        var container = document.getElementById('json-editor');
+        var options = {
+            mode: 'tree',
+            modes: ['tree', 'code', 'form', 'text', 'view']
+        };
+        
+        var editor = new JSONEditor(container, options);
+        
+        // Set the initial JSON data
+        try {
+            var jsonString = '{{ config_json|tojson|safe }}';
+            var jsonData = jsonString === '{}' ? {} : JSON.parse(jsonString);
+            editor.set(jsonData);
+        } catch (e) {
+            console.error("Error parsing initial JSON:", e);
+            showStatusMessage('Error loading JSON data: ' + e.message, 'error');
+        }
+        
+        // 保存系统配置的AJAX请求
+        document.getElementById('save-system-conf-btn').addEventListener('click', function() {
+            // 获取表单数据
+            const form = document.querySelector('#system-conf form');
+            const formData = new FormData(form);
+            
+            // 显示加载状态
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+            this.disabled = true;
+            
+            // 设置请求头，明确指定我们期望JSON响应
+            const requestHeaders = {
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            };
+            
+            // 发送AJAX请求
+            fetch("{{ url_for('project_config', project_id=project.id) }}", {
+                method: 'POST',
+                body: formData,
+                headers: requestHeaders,
+                credentials: 'same-origin'
+            })
+            .then(response => {
+                // 先检查内容类型
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    // 如果不是JSON响应，获取文本内容并抛出错误
+                    return response.text().then(text => {
+                        throw new Error('Server returned non-JSON response: ' + text.substring(0, 100) + '...');
+                    });
+                }
+                
+                // 如果是JSON响应但状态码不是2xx
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.message || `HTTP error! Status: ${response.status}`);
+                    });
+                }
+                
+                // 正常响应，解析JSON
+                return response.json();
+            })
+            .then(data => {
+                // 恢复按钮状态
+                this.innerHTML = '<i class="fas fa-save me-2"></i>Save system.conf';
+                this.disabled = false;
+                
+                // 显示结果消息
+                if (data.success) {
+                    showStatusMessage(data.message, 'success');
+                } else {
+                    showStatusMessage(data.message || 'Error saving configuration', 'error');
+                }
+            })
+            .catch(error => {
+                // 恢复按钮状态
+                this.innerHTML = '<i class="fas fa-save me-2"></i>Save system.conf';
+                this.disabled = false;
+                
+                // 显示错误消息
+                console.error('Error saving system configuration:', error);
+                showStatusMessage('Error saving system configuration: ' + error.message, 'error');
+            });
+        });
+        
+        // Save JSON button
+        document.getElementById('save-json-btn').addEventListener('click', function() {
+            try {
+                const jsonData = editor.get();
+                
+                // 验证JSON数据
+                if (!jsonData) {
+                    showStatusMessage('Error: JSON data is empty or invalid', 'error');
+                    return;
+                }
+                
+                // 简单验证JSON结构
+                if (typeof jsonData !== 'object') {
+                    showStatusMessage('Error: Invalid JSON structure. Expected an object.', 'error');
+                    return;
+                }
+                
+                // 将JSON转换为字符串，用于传递到后端
+                const jsonString = JSON.stringify(jsonData);
+                
+                // 显示加载状态
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+                this.disabled = true;
+                
+                // 构建表单数据
+                const formData = new FormData();
+                formData.append('config_json_data', jsonString);
+                formData.append('update_config_json', '1');
+                
+                // 设置请求头，明确指定我们期望JSON响应
+                const requestHeaders = {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                };
+                
+                // 发送AJAX请求
+                fetch("{{ url_for('project_config', project_id=project.id) }}", {
+                    method: 'POST',
+                    body: formData,
+                    headers: requestHeaders,
+                    credentials: 'same-origin'
+                })
+                .then(response => {
+                    // 先检查内容类型
+                    const contentType = response.headers.get('content-type');
+                    if (!contentType || !contentType.includes('application/json')) {
+                        // 如果不是JSON响应，获取文本内容并抛出错误
+                        return response.text().then(text => {
+                            throw new Error('Server returned non-JSON response: ' + text.substring(0, 100) + '...');
+                        });
+                    }
+                    
+                    // 如果是JSON响应但状态码不是2xx
+                    if (!response.ok) {
+                        return response.json().then(data => {
+                            throw new Error(data.message || `HTTP error! Status: ${response.status}`);
+                        });
+                    }
+                    
+                    // 正常响应，解析JSON
+                    return response.json();
+                })
+                .then(data => {
+                    // 恢复按钮状态
+                    this.innerHTML = '<i class="fas fa-save me-2"></i>Save config.json';
+                    this.disabled = false;
+                    
+                    // 显示结果消息
+                    if (data.success) {
+                        showStatusMessage(data.message, 'success');
+                    } else {
+                        showStatusMessage(data.message || 'Error saving JSON configuration', 'error');
+                    }
+                })
+                .catch(error => {
+                    // 恢复按钮状态
+                    this.innerHTML = '<i class="fas fa-save me-2"></i>Save config.json';
+                    this.disabled = false;
+                    
+                    // 显示错误消息
+                    console.error('Error saving JSON configuration:', error);
+                    showStatusMessage('Error saving JSON configuration: ' + error.message, 'error');
+                });
+            } catch (error) {
+                console.error('Error saving JSON:', error);
+                showStatusMessage('Error saving JSON configuration: ' + error.message, 'error');
+            }
+        });
+
+        // Field Management functionality
+        
+        // Toggle between system.conf and config.json field management
+        document.getElementById('field-config-type').addEventListener('change', function() {
+            const isSystem = this.value === 'system';
+            document.getElementById('section-container').style.display = isSystem ? 'block' : 'none';
+            document.getElementById('json-path-container').style.display = isSystem ? 'none' : 'block';
+        });
+
+        // Initialize field browser
+        function loadFieldBrowser() {
+            const configType = document.getElementById('field-browser-type').value;
+            const section = document.getElementById('field-browser-section').value;
+            const tableBody = document.getElementById('field-browser-table').querySelector('tbody');
+            
+            // Clear existing rows
+            tableBody.innerHTML = '';
+            
+            if (configType === 'system') {
+                // Load system.conf fields
+                {% for section in system_config.sections() %}
+                    {% for key, value in system_config[section].items() %}
+                    if (!section || section === '{{ section }}') {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>{{ section }}</td>
+                            <td>{{ key }}</td>
+                            <td>{{ value }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary edit-field" data-type="system" data-section="{{ section }}" data-key="{{ key }}" data-value="{{ value }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger delete-field" data-type="system" data-section="{{ section }}" data-key="{{ key }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    }
+                    {% endfor %}
+                {% endfor %}
+            } else {
+                // Load config.json fields
+                function flattenJson(obj, path = '') {
+                    const result = [];
+                    for (const key in obj) {
+                        const newPath = path ? `${path}.${key}` : key;
+                        if (typeof obj[key] === 'object' && obj[key] !== null) {
+                            result.push(...flattenJson(obj[key], newPath));
+                        } else {
+                            result.push({
+                                path: path,
+                                key: key,
+                                value: obj[key]
+                            });
+                        }
+                    }
+                    return result;
+                }
+                
+                try {
+                    const jsonData = editor.get();
+                    const fields = flattenJson(jsonData);
+                    
+                    fields.forEach(field => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${field.path || '(root)'}</td>
+                            <td>${field.key}</td>
+                            <td>${String(field.value)}</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary edit-field" data-type="config" data-path="${field.path}" data-key="${field.key}" data-value="${String(field.value)}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger delete-field" data-type="config" data-path="${field.path}" data-key="${field.key}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                } catch (e) {
+                    console.error("Error processing JSON data for browser:", e);
+                }
+            }
+            
+            // Add event listeners to edit buttons
+            document.querySelectorAll('.edit-field').forEach(button => {
+                button.addEventListener('click', function() {
+                    const type = this.getAttribute('data-type');
+                    const section = this.getAttribute('data-section');
+                    const path = this.getAttribute('data-path');
+                    const key = this.getAttribute('data-key');
+                    const value = this.getAttribute('data-value');
+                    
+                    // Fill the form with values for editing
+                    document.getElementById('field-config-type').value = type;
+                    if (type === 'system') {
+                        document.getElementById('section-container').style.display = 'block';
+                        document.getElementById('json-path-container').style.display = 'none';
+                        document.getElementById('field-section').value = section;
+                    } else {
+                        document.getElementById('section-container').style.display = 'none';
+                        document.getElementById('json-path-container').style.display = 'block';
+                        document.getElementById('field-json-path').value = path;
+                    }
+                    document.getElementById('field-key').value = key;
+                    document.getElementById('field-value').value = value;
+                    
+                    // Scroll to the form
+                    document.getElementById('field-management-form').scrollIntoView({behavior: 'smooth'});
+                });
+            });
+            
+            // Add event listeners to delete buttons
+            document.querySelectorAll('.delete-field').forEach(button => {
+                button.addEventListener('click', function() {
+                    if (confirm('Are you sure you want to delete this field?')) {
+                        const type = this.getAttribute('data-type');
+                        const section = this.getAttribute('data-section');
+                        const path = this.getAttribute('data-path');
+                        const key = this.getAttribute('data-key');
+                        
+                        // Set up the form data for the delete operation
+                        const formData = new FormData();
+                        formData.append('field_management', '1');
+                        formData.append('action', 'delete');
+                        formData.append('type', type);
+                        
+                        if (type === 'system') {
+                            formData.append('section', section);
+                        } else {
+                            formData.append('path', path);
+                        }
+                        
+                        formData.append('key', key);
+                        
+                        // Send AJAX request
+                        fetch("{{ url_for('project_config', project_id=project.id) }}", {
+                            method: 'POST',
+                            body: formData,
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            credentials: 'same-origin'
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                showStatusMessage(data.message, 'success');
+                                // Reload field browser
+                                loadFieldBrowser();
+                                
+                                // If it was a config.json field, reload the editor
+                                if (type === 'config' && data.updated_json) {
+                                    editor.set(data.updated_json);
+                                }
+                            } else {
+                                showStatusMessage(data.message || 'Error deleting field', 'error');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error deleting field:', error);
+                            showStatusMessage('Error deleting field: ' + error.message, 'error');
+                        });
+                    }
+                });
+            });
+        }
+        
+        // Initialize field browser on load
+        loadFieldBrowser();
+        
+        // Update field browser when the type or section changes
+        document.getElementById('field-browser-type').addEventListener('change', loadFieldBrowser);
+        document.getElementById('field-browser-section').addEventListener('change', loadFieldBrowser);
+        
+        // Add/Update field button
+        document.getElementById('add-field-btn').addEventListener('click', function() {
+            const type = document.getElementById('field-config-type').value;
+            const section = document.getElementById('field-section').value;
+            const path = document.getElementById('field-json-path').value;
+            const key = document.getElementById('field-key').value;
+            const value = document.getElementById('field-value').value;
+            
+            if (!key) {
+                showStatusMessage('Field key is required', 'error');
+                return;
+            }
+            
+            if (type === 'system' && !section) {
+                showStatusMessage('Section is required for system.conf fields', 'error');
+                return;
+            }
+            
+            // Set up the form data for the add/update operation
+            const formData = new FormData();
+            formData.append('field_management', '1');
+            formData.append('action', 'add_update');
+            formData.append('type', type);
+            
+            if (type === 'system') {
+                formData.append('section', section);
+            } else {
+                formData.append('path', path);
+            }
+            
+            formData.append('key', key);
+            formData.append('value', value);
+            
+            // Show loading state
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+            this.disabled = true;
+            
+            // Send AJAX request
+            fetch("{{ url_for('project_config', project_id=project.id) }}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Restore button state
+                this.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Add/Update Field';
+                this.disabled = false;
+                
+                if (data.success) {
+                    showStatusMessage(data.message, 'success');
+                    
+                    // Clear the form
+                    document.getElementById('field-key').value = '';
+                    document.getElementById('field-value').value = '';
+                    
+                    // Reload field browser
+                    loadFieldBrowser();
+                    
+                    // If it was a config.json field, reload the editor
+                    if (type === 'config' && data.updated_json) {
+                        editor.set(data.updated_json);
+                    }
+                } else {
+                    showStatusMessage(data.message || 'Error adding/updating field', 'error');
+                }
+            })
+            .catch(error => {
+                // Restore button state
+                this.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Add/Update Field';
+                this.disabled = false;
+                
+                console.error('Error adding/updating field:', error);
+                showStatusMessage('Error adding/updating field: ' + error.message, 'error');
+            });
+        });
+    });
+</script>
+{% endblock %} 
