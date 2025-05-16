@@ -214,6 +214,17 @@ cryptography==41.0.1
 
 5. 通过Web界面编辑和管理配置
 
+6. fay接入
+fay/util/config_util.py
+```
+CONFIG_SERVER = {
+    'BASE_URL': 'http://219.135.170.56:5500',  # 默认API服务器地址
+    'API_KEY': 'your-api-key-here',       # 默认API密钥
+    'PROJECT_ID': 'd19f7b0a-2b8a-4503-8c0d-1a587b90eb69'  # 项目ID，需要在使用前设置
+}
+
+```
+
 ## 安全注意事项
 
 - 首次登录后立即更改默认管理员密码
